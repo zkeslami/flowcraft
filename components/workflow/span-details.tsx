@@ -94,7 +94,7 @@ export const SpanDetails = ({
               </Button>
             )}
             <Badge variant="outline" className={cn('gap-1.5', config.className)}>
-              <StatusIcon className={cn('h-3.5 w-3.5', span.status === 'running' && 'animate-spin')} />
+              <StatusIcon className="h-3.5 w-3.5" />
               {config.label}
             </Badge>
             <DropdownMenu>

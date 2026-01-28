@@ -32,12 +32,21 @@ import {
   GitBranch,
   Send,
   Bot,
+  History,
 } from "lucide-react"
 import type { WorkflowNode, Variable as VariableType, NodeExecutionStatus, Connection } from "@/lib/workflow-types"
 import { cn } from "@/lib/utils"
 import { CodeEditor } from "./code-editor"
 import { QuadrantEditor } from "./quadrant-editor"
 import { AgentPromptEditor } from "@/components/prompt-editor/AgentPromptEditor"
+import { DataViewer } from "./data-viewer"
+import { NodeRunHistory } from "./node-run-history"
+import { MockSimulationConfig, type MockConfig, type SimulationConfig } from "./mock-simulation-config"
+import type { ExecutionSpan } from "@/lib/execution-types"
+import { mockExecutionHistory, executionMap } from "@/lib/mock-execution-data"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
+import { Database, Wand2 } from "lucide-react"
 
 type ModuleType = "code" | "input" | "output"
 type DraggingModule = { index: number; type: ModuleType } | null
@@ -84,6 +93,27 @@ export function PropertiesPanelV7({
   const [lastRunTime, setLastRunTime] = useState<string | null>(null)
   const [layout, setLayout] = useState<"horizontal" | "vertical">("horizontal")
   const [activeTab, setActiveTab] = useState<"properties" | "variables">("properties")
+
+  // New state for mock/simulation/history
+  const [showRunHistory, setShowRunHistory] = useState(false)
+  const [showMockDialog, setShowMockDialog] = useState(false)
+  const [showSimulationDialog, setShowSimulationDialog] = useState(false)
+  const [mockConfig, setMockConfig] = useState<MockConfig>({
+    enabled: false,
+    source: "custom",
+    customData: JSON.stringify({
+      "invoiceId": "INV-2024-001",
+      "vendor": "Acme Corp",
+      "amount": 1250.00,
+      "date": "2024-01-15",
+      "isValid": true
+    }, null, 2)
+  })
+  const [simulationConfig, setSimulationConfig] = useState<SimulationConfig>({
+    enabled: false,
+    prompt: "Simulate a successful validation with confidence score of 0.95 and all checks passed"
+  })
+  const [runResult, setRunResult] = useState<Record<string, unknown> | null>(null)
 
   const [codePaneWidth, setCodePaneWidth] = useState(60)
   const [codePaneHeight, setCodePaneHeight] = useState(60)
@@ -259,8 +289,70 @@ export function PropertiesPanelV7({
     }
   }, [isResizingWidth, isResizingVertical, isResizingHorizontal, isResizingInputOutput, isResizingGraph, onWidthChange, draggingModule, dropTarget, moduleOrder])
 
+  // Get available runs for this node from execution history
+  const availableRuns: ExecutionSpan[] = []
+  mockExecutionHistory.forEach((historyItem) => {
+    const execution = executionMap[historyItem.id]
+    if (execution) {
+      const nodeSpans = execution.spans.filter((span) => span.nodeId === node.id)
+      availableRuns.push(...nodeSpans)
+    }
+  })
+
+  // Generate dummy input data if not present
+  const getDummyInputData = () => {
+    if (node.id === "3") { // Validate Invoice node
+      return {
+        "extracted": {
+          "vendor": "Acme Corp",
+          "amount": 1250.00,
+          "date": "2024-01-15",
+          "items": [
+            { "description": "Professional Services", "amount": 1250.00 }
+          ]
+        },
+        "invoiceId": "INV-2024-001",
+        "timestamp": new Date().toISOString()
+      }
+    }
+    return { "message": "Sample input data", "timestamp": new Date().toISOString() }
+  }
+
   const handleRun = () => {
     if (onRunNode) {
+      // Handle mock/simulation modes
+      if (simulationConfig.enabled) {
+        // Simulate output based on prompt
+        setTimeout(() => {
+          setRunResult({
+            "simulated": true,
+            "isValid": true,
+            "confidence": 0.95,
+            "checks": {
+              "vendorExists": true,
+              "amountValid": true,
+              "dateValid": true,
+              "budgetApproved": true
+            },
+            "message": "Simulated validation successful",
+            "timestamp": new Date().toISOString()
+          })
+        }, 1500)
+      } else if (mockConfig.enabled) {
+        // Use mock data
+        setTimeout(() => {
+          if (mockConfig.source === "custom" && mockConfig.customData) {
+            try {
+              setRunResult(JSON.parse(mockConfig.customData))
+            } catch {
+              setRunResult({ "error": "Invalid JSON in mock data" })
+            }
+          } else if (mockConfig.source === "history" && mockConfig.historyRunId) {
+            const run = availableRuns.find((r) => r.id === mockConfig.historyRunId)
+            setRunResult(run?.outputs || {})
+          }
+        }, 1000)
+      }
       onRunNode()
     }
   }
@@ -444,7 +536,22 @@ export function PropertiesPanelV7({
             </Button>
           </div>
 
-          {layout === "horizontal" ? (
+          {showRunHistory ? (
+            <NodeRunHistory
+              nodeId={node.id}
+              nodeName={node.label}
+              runs={availableRuns}
+              onClose={() => setShowRunHistory(false)}
+              onSelectRun={(run) => {
+                // Optionally load run data into node
+                setMockConfig({
+                  enabled: true,
+                  source: "history",
+                  historyRunId: run.id,
+                })
+              }}
+            />
+          ) : layout === "horizontal" ? (
             <HorizontalLayout
               node={node}
               onNodeUpdate={onNodeUpdate}
@@ -458,6 +565,19 @@ export function PropertiesPanelV7({
               onModuleDragStart={handleModuleDragStart}
               draggingModule={draggingModule}
               dropTarget={dropTarget}
+              isNodeRunning={isNodeRunning}
+              mockConfig={mockConfig}
+              simulationConfig={simulationConfig}
+              onMockConfigChange={setMockConfig}
+              onSimulationConfigChange={setSimulationConfig}
+              availableRuns={availableRuns}
+              onShowRunHistory={() => setShowRunHistory(true)}
+              runResult={runResult}
+              getDummyInputData={getDummyInputData}
+              showMockDialog={showMockDialog}
+              setShowMockDialog={setShowMockDialog}
+              showSimulationDialog={showSimulationDialog}
+              setShowSimulationDialog={setShowSimulationDialog}
             />
           ) : (
             <VerticalLayout
@@ -473,6 +593,19 @@ export function PropertiesPanelV7({
               onModuleDragStart={handleModuleDragStart}
               draggingModule={draggingModule}
               dropTarget={dropTarget}
+              isNodeRunning={isNodeRunning}
+              mockConfig={mockConfig}
+              simulationConfig={simulationConfig}
+              onMockConfigChange={setMockConfig}
+              onSimulationConfigChange={setSimulationConfig}
+              availableRuns={availableRuns}
+              onShowRunHistory={() => setShowRunHistory(true)}
+              runResult={runResult}
+              getDummyInputData={getDummyInputData}
+              showMockDialog={showMockDialog}
+              setShowMockDialog={setShowMockDialog}
+              showSimulationDialog={showSimulationDialog}
+              setShowSimulationDialog={setShowSimulationDialog}
             />
           )}
         </>
@@ -511,12 +644,30 @@ function ModuleContent({
   onNodeUpdate,
   codeTab,
   setCodeTab,
+  isNodeRunning,
+  mockConfig,
+  simulationConfig,
+  onMockConfigChange,
+  onSimulationConfigChange,
+  availableRuns,
+  onShowRunHistory,
+  runResult,
+  getDummyInputData,
 }: {
   type: ModuleType
   node: WorkflowNode
   onNodeUpdate: (node: WorkflowNode) => void
   codeTab: CodeModuleTab
   setCodeTab: (tab: CodeModuleTab) => void
+  isNodeRunning?: boolean
+  mockConfig?: MockConfig
+  simulationConfig?: SimulationConfig
+  onMockConfigChange?: (config: MockConfig) => void
+  onSimulationConfigChange?: (config: SimulationConfig) => void
+  availableRuns?: ExecutionSpan[]
+  onShowRunHistory?: () => void
+  runResult?: Record<string, unknown> | null
+  getDummyInputData?: () => Record<string, unknown>
 }) {
   if (type === "code") {
     return (
@@ -569,6 +720,7 @@ function ModuleContent({
                   value={node.label}
                   onChange={(e) => onNodeUpdate({ ...node, label: e.target.value })}
                   className="mt-1 h-8 bg-secondary/50"
+                  disabled={isNodeRunning}
                 />
               </div>
               <div>
@@ -577,6 +729,7 @@ function ModuleContent({
                   value={node.data?.runtime || "Node.js"}
                   onChange={(e) => onNodeUpdate({ ...node, data: { ...node.data, runtime: e.target.value } })}
                   className="mt-1 h-8 bg-secondary/50"
+                  disabled={isNodeRunning}
                 />
               </div>
               
@@ -599,6 +752,7 @@ function ModuleContent({
                       value={node.data?.currentLLM || "GPT-4o"}
                       onChange={(e) => onNodeUpdate({ ...node, data: { ...node.data, currentLLM: e.target.value } })}
                       className="mt-1 h-8 bg-secondary/50"
+                      disabled={isNodeRunning}
                     />
                   </div>
                   <div>
@@ -613,6 +767,7 @@ function ModuleContent({
                       max={2}
                       step={0.1}
                       className="mt-2"
+                      disabled={isNodeRunning}
                     />
                   </div>
                   <div>
@@ -627,6 +782,7 @@ function ModuleContent({
                       max={8192}
                       step={256}
                       className="mt-2"
+                      disabled={isNodeRunning}
                     />
                   </div>
                   <div>
@@ -679,37 +835,75 @@ function ModuleContent({
   }
 
   if (type === "input") {
+    const inputData = getDummyInputData ? getDummyInputData() : {}
+    let parsedInput: Record<string, unknown> = inputData
+
+    try {
+      if (node.data?.input) {
+        parsedInput = JSON.parse(node.data.input)
+      }
+    } catch {
+      // Use dummy data if parsing fails
+    }
+
     return (
       <div className="flex-1 overflow-hidden">
-        <CodeEditor
-          value={node.data?.input || "{}"}
-          onChange={(input) => onNodeUpdate({ ...node, data: { ...node.data, input } })}
-          language="json"
+        <DataViewer
+          data={parsedInput}
+          mode="input"
+          readOnly={isNodeRunning}
+          onChange={(value) => onNodeUpdate({ ...node, data: { ...node.data, input: value } })}
         />
       </div>
     )
   }
 
   // output
-  return (
-    <div className="flex-1 overflow-hidden">
-      <CodeEditor
-        value={node.data?.output || "{}"}
-        onChange={(output) => onNodeUpdate({ ...node, data: { ...node.data, output } })}
-        language="json"
-      />
-    </div>
-  )
+  if (type === "output") {
+    // Use run result if available, otherwise use node data
+    const outputData = runResult || (node.data?.output ? (() => {
+      try {
+        return JSON.parse(node.data.output)
+      } catch {
+        return {}
+      }
+    })() : {
+      "isValid": true,
+      "confidence": 0.92,
+      "checks": {
+        "vendorExists": true,
+        "amountValid": true,
+        "dateValid": true,
+        "budgetApproved": true
+      },
+      "timestamp": new Date().toISOString()
+    })
+
+    return (
+      <div className="flex-1 overflow-hidden">
+        <DataViewer
+          data={outputData}
+          mode="output"
+          readOnly={isNodeRunning}
+          onChange={(value) => onNodeUpdate({ ...node, data: { ...node.data, output: value } })}
+        />
+      </div>
+    )
+  }
+
+  return null
 }
 
 function ModuleHeader({
   type,
   index,
   onModuleDragStart,
+  actions,
 }: {
   type: ModuleType
   index: number
   onModuleDragStart: (e: React.MouseEvent, index: number, type: ModuleType) => void
+  actions?: React.ReactNode
 }) {
   const colors = {
     code: "bg-chart-1",
@@ -724,7 +918,7 @@ function ModuleHeader({
 
   return (
     <div className="flex h-8 items-center gap-2 border-b border-border bg-secondary/30 px-1 shrink-0">
-      <div 
+      <div
         className="flex h-full cursor-grab items-center px-1 hover:bg-secondary active:cursor-grabbing"
         onMouseDown={(e) => onModuleDragStart(e, index, type)}
       >
@@ -732,6 +926,7 @@ function ModuleHeader({
       </div>
       <div className={cn("h-2 w-2 rounded-full", colors[type])} />
       <span className="text-xs font-medium text-foreground">{labels[type]}</span>
+      {actions && <div className="ml-auto flex items-center gap-1">{actions}</div>}
     </div>
   )
 }
@@ -749,6 +944,19 @@ function HorizontalLayout({
   onModuleDragStart,
   draggingModule,
   dropTarget,
+  isNodeRunning,
+  mockConfig,
+  simulationConfig,
+  onMockConfigChange,
+  onSimulationConfigChange,
+  availableRuns,
+  onShowRunHistory,
+  runResult,
+  getDummyInputData,
+  showMockDialog,
+  setShowMockDialog,
+  showSimulationDialog,
+  setShowSimulationDialog,
 }: {
   node: WorkflowNode
   onNodeUpdate: (node: WorkflowNode) => void
@@ -762,6 +970,19 @@ function HorizontalLayout({
   onModuleDragStart: (e: React.MouseEvent, index: number, type: ModuleType) => void
   draggingModule: DraggingModule
   dropTarget: DropTarget
+  isNodeRunning?: boolean
+  mockConfig?: MockConfig
+  simulationConfig?: SimulationConfig
+  onMockConfigChange?: (config: MockConfig) => void
+  onSimulationConfigChange?: (config: SimulationConfig) => void
+  availableRuns?: ExecutionSpan[]
+  onShowRunHistory?: () => void
+  runResult?: Record<string, unknown> | null
+  getDummyInputData?: () => Record<string, unknown>
+  showMockDialog?: boolean
+  setShowMockDialog?: (show: boolean) => void
+  showSimulationDialog?: boolean
+  setShowSimulationDialog?: (show: boolean) => void
 }) {
   const [codeTab, setCodeTab] = useState<CodeModuleTab>("script")
 
@@ -772,39 +993,127 @@ function HorizontalLayout({
   const topRightModule = moduleOrder[1]
   const bottomRightModule = moduleOrder[2]
 
+  // Generate header actions
+  const getModuleActions = (moduleType: ModuleType) => {
+    if (moduleType === "input" && onShowRunHistory && availableRuns && availableRuns.length > 0) {
+      return (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 gap-1.5 text-xs"
+          onClick={onShowRunHistory}
+        >
+          <History className="h-3 w-3" />
+          History ({availableRuns.length})
+        </Button>
+      )
+    }
+    if (moduleType === "output" && mockConfig && simulationConfig && onMockConfigChange && onSimulationConfigChange) {
+      return (
+        <>
+          <div className="flex items-center gap-1.5 px-2">
+            <Database className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">Mock</span>
+            <Switch
+              checked={mockConfig.enabled}
+              onCheckedChange={(enabled) => {
+                onMockConfigChange({ ...mockConfig, enabled })
+                if (enabled && setShowMockDialog) setShowMockDialog(true)
+              }}
+              className="scale-75"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 px-2">
+            <Wand2 className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">Sim</span>
+            <Switch
+              checked={simulationConfig.enabled}
+              onCheckedChange={(enabled) => {
+                onSimulationConfigChange({ ...simulationConfig, enabled })
+                if (enabled && setShowSimulationDialog) setShowSimulationDialog(true)
+              }}
+              className="scale-75"
+            />
+          </div>
+        </>
+      )
+    }
+    return null
+  }
+
   return (
     <div className="flex flex-1 overflow-hidden" style={{ height: contentHeight }}>
       {/* Left panel - first module in order */}
-      <div 
+      <div
         data-module-cell
         data-module-index={0}
         className={cn(
           "flex flex-col overflow-hidden transition-all",
           dropTarget?.index === 0 && "ring-2 ring-primary ring-inset",
           draggingModule?.index === 0 && "opacity-50"
-        )} 
+        )}
         style={{ width: `${codePaneWidth}%` }}
       >
-        <ModuleHeader type={leftModule} index={0} onModuleDragStart={onModuleDragStart} />
-        <ModuleContent type={leftModule} node={node} onNodeUpdate={onNodeUpdate} codeTab={codeTab} setCodeTab={setCodeTab} />
+        <ModuleHeader
+          type={leftModule}
+          index={0}
+          onModuleDragStart={onModuleDragStart}
+          actions={getModuleActions(leftModule)}
+        />
+        <ModuleContent
+          type={leftModule}
+          node={node}
+          onNodeUpdate={onNodeUpdate}
+          codeTab={codeTab}
+          setCodeTab={setCodeTab}
+          isNodeRunning={isNodeRunning}
+          mockConfig={mockConfig}
+          simulationConfig={simulationConfig}
+          onMockConfigChange={onMockConfigChange}
+          onSimulationConfigChange={onSimulationConfigChange}
+          availableRuns={availableRuns}
+          onShowRunHistory={onShowRunHistory}
+          runResult={runResult}
+          getDummyInputData={getDummyInputData}
+        />
       </div>
 
       <div className="w-1 cursor-ew-resize bg-border hover:bg-primary/50 active:bg-primary" onMouseDown={onResizeStart} />
 
       {/* Right panel - second and third modules */}
       <div data-io-pane className="flex flex-1 flex-col overflow-hidden">
-        <div 
+        <div
           data-module-cell
           data-module-index={1}
           className={cn(
             "flex flex-col transition-all",
             dropTarget?.index === 1 && "ring-2 ring-primary ring-inset",
             draggingModule?.index === 1 && "opacity-50"
-          )} 
+          )}
           style={{ height: `${inputOutputSplit}%` }}
         >
-          <ModuleHeader type={topRightModule} index={1} onModuleDragStart={onModuleDragStart} />
-          <ModuleContent type={topRightModule} node={node} onNodeUpdate={onNodeUpdate} codeTab={codeTab} setCodeTab={setCodeTab} />
+          <ModuleHeader
+            type={topRightModule}
+            index={1}
+            onModuleDragStart={onModuleDragStart}
+            actions={getModuleActions(topRightModule)}
+          />
+          <ModuleContent
+            type={topRightModule}
+            node={node}
+            onNodeUpdate={onNodeUpdate}
+            codeTab={codeTab}
+            setCodeTab={setCodeTab}
+            isNodeRunning={isNodeRunning}
+            mockConfig={mockConfig}
+            simulationConfig={simulationConfig}
+            onMockConfigChange={onMockConfigChange}
+            onSimulationConfigChange={onSimulationConfigChange}
+            availableRuns={availableRuns}
+            onShowRunHistory={onShowRunHistory}
+            runResult={runResult}
+            getDummyInputData={getDummyInputData}
+          />
         </div>
 
         <div
@@ -812,7 +1121,7 @@ function HorizontalLayout({
           onMouseDown={onInputOutputResizeStart}
         />
 
-        <div 
+        <div
           data-module-cell
           data-module-index={2}
           className={cn(
@@ -821,10 +1130,76 @@ function HorizontalLayout({
             draggingModule?.index === 2 && "opacity-50"
           )}
         >
-          <ModuleHeader type={bottomRightModule} index={2} onModuleDragStart={onModuleDragStart} />
-          <ModuleContent type={bottomRightModule} node={node} onNodeUpdate={onNodeUpdate} codeTab={codeTab} setCodeTab={setCodeTab} />
+          <ModuleHeader
+            type={bottomRightModule}
+            index={2}
+            onModuleDragStart={onModuleDragStart}
+            actions={getModuleActions(bottomRightModule)}
+          />
+          <ModuleContent
+            type={bottomRightModule}
+            node={node}
+            onNodeUpdate={onNodeUpdate}
+            codeTab={codeTab}
+            setCodeTab={setCodeTab}
+            isNodeRunning={isNodeRunning}
+            mockConfig={mockConfig}
+            simulationConfig={simulationConfig}
+            onMockConfigChange={onMockConfigChange}
+            onSimulationConfigChange={onSimulationConfigChange}
+            availableRuns={availableRuns}
+            onShowRunHistory={onShowRunHistory}
+            runResult={runResult}
+            getDummyInputData={getDummyInputData}
+          />
         </div>
       </div>
+
+      {/* Mock Data Dialog */}
+      {showMockDialog && setShowMockDialog && mockConfig && onMockConfigChange && (
+        <Dialog open={showMockDialog} onOpenChange={setShowMockDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Mock Data Configuration
+              </DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-auto">
+              <MockSimulationConfig
+                mockConfig={mockConfig}
+                simulationConfig={{ enabled: false, prompt: "" }}
+                onMockConfigChange={onMockConfigChange}
+                onSimulationConfigChange={() => {}}
+                availableRuns={availableRuns || []}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Simulation Dialog */}
+      {showSimulationDialog && setShowSimulationDialog && simulationConfig && onSimulationConfigChange && (
+        <Dialog open={showSimulationDialog} onOpenChange={setShowSimulationDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Wand2 className="h-4 w-4" />
+                Simulation Configuration
+              </DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-auto">
+              <MockSimulationConfig
+                mockConfig={{ enabled: false, source: "custom" }}
+                simulationConfig={simulationConfig}
+                onMockConfigChange={() => {}}
+                onSimulationConfigChange={onSimulationConfigChange}
+                availableRuns={availableRuns || []}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
@@ -842,6 +1217,19 @@ function VerticalLayout({
   onModuleDragStart,
   draggingModule,
   dropTarget,
+  isNodeRunning,
+  mockConfig,
+  simulationConfig,
+  onMockConfigChange,
+  onSimulationConfigChange,
+  availableRuns,
+  onShowRunHistory,
+  runResult,
+  getDummyInputData,
+  showMockDialog,
+  setShowMockDialog,
+  showSimulationDialog,
+  setShowSimulationDialog,
 }: {
   node: WorkflowNode
   onNodeUpdate: (node: WorkflowNode) => void
@@ -855,6 +1243,19 @@ function VerticalLayout({
   onModuleDragStart: (e: React.MouseEvent, index: number, type: ModuleType) => void
   draggingModule: DraggingModule
   dropTarget: DropTarget
+  isNodeRunning?: boolean
+  mockConfig?: MockConfig
+  simulationConfig?: SimulationConfig
+  onMockConfigChange?: (config: MockConfig) => void
+  onSimulationConfigChange?: (config: SimulationConfig) => void
+  availableRuns?: ExecutionSpan[]
+  onShowRunHistory?: () => void
+  runResult?: Record<string, unknown> | null
+  getDummyInputData?: () => Record<string, unknown>
+  showMockDialog?: boolean
+  setShowMockDialog?: (show: boolean) => void
+  showSimulationDialog?: boolean
+  setShowSimulationDialog?: (show: boolean) => void
 }) {
   const [codeTab, setCodeTab] = useState<CodeModuleTab>("script")
 
@@ -865,39 +1266,127 @@ function VerticalLayout({
   const bottomLeftModule = moduleOrder[1]
   const bottomRightModule = moduleOrder[2]
 
+  // Generate header actions
+  const getModuleActions = (moduleType: ModuleType) => {
+    if (moduleType === "input" && onShowRunHistory && availableRuns && availableRuns.length > 0) {
+      return (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 px-2 gap-1.5 text-xs"
+          onClick={onShowRunHistory}
+        >
+          <History className="h-3 w-3" />
+          History ({availableRuns.length})
+        </Button>
+      )
+    }
+    if (moduleType === "output" && mockConfig && simulationConfig && onMockConfigChange && onSimulationConfigChange) {
+      return (
+        <>
+          <div className="flex items-center gap-1.5 px-2">
+            <Database className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">Mock</span>
+            <Switch
+              checked={mockConfig.enabled}
+              onCheckedChange={(enabled) => {
+                onMockConfigChange({ ...mockConfig, enabled })
+                if (enabled && setShowMockDialog) setShowMockDialog(true)
+              }}
+              className="scale-75"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 px-2">
+            <Wand2 className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">Sim</span>
+            <Switch
+              checked={simulationConfig.enabled}
+              onCheckedChange={(enabled) => {
+                onSimulationConfigChange({ ...simulationConfig, enabled })
+                if (enabled && setShowSimulationDialog) setShowSimulationDialog(true)
+              }}
+              className="scale-75"
+            />
+          </div>
+        </>
+      )
+    }
+    return null
+  }
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden" style={{ height: contentHeight }}>
       {/* Top panel - first module in order */}
-      <div 
+      <div
         data-module-cell
         data-module-index={0}
         className={cn(
           "flex flex-col overflow-hidden transition-all",
           dropTarget?.index === 0 && "ring-2 ring-primary ring-inset",
           draggingModule?.index === 0 && "opacity-50"
-        )} 
+        )}
         style={{ height: `${codePaneHeight}%` }}
       >
-        <ModuleHeader type={topModule} index={0} onModuleDragStart={onModuleDragStart} />
-        <ModuleContent type={topModule} node={node} onNodeUpdate={onNodeUpdate} codeTab={codeTab} setCodeTab={setCodeTab} />
+        <ModuleHeader
+          type={topModule}
+          index={0}
+          onModuleDragStart={onModuleDragStart}
+          actions={getModuleActions(topModule)}
+        />
+        <ModuleContent
+          type={topModule}
+          node={node}
+          onNodeUpdate={onNodeUpdate}
+          codeTab={codeTab}
+          setCodeTab={setCodeTab}
+          isNodeRunning={isNodeRunning}
+          mockConfig={mockConfig}
+          simulationConfig={simulationConfig}
+          onMockConfigChange={onMockConfigChange}
+          onSimulationConfigChange={onSimulationConfigChange}
+          availableRuns={availableRuns}
+          onShowRunHistory={onShowRunHistory}
+          runResult={runResult}
+          getDummyInputData={getDummyInputData}
+        />
       </div>
 
       <div className="h-1 cursor-ns-resize bg-border hover:bg-primary/50 active:bg-primary" onMouseDown={onResizeStart} />
 
       {/* Bottom panel - second and third modules side by side */}
       <div data-io-pane className="flex flex-1 overflow-hidden">
-        <div 
+        <div
           data-module-cell
           data-module-index={1}
           className={cn(
             "flex flex-1 flex-col transition-all",
             dropTarget?.index === 1 && "ring-2 ring-primary ring-inset",
             draggingModule?.index === 1 && "opacity-50"
-          )} 
+          )}
           style={{ width: `${inputOutputSplit}%` }}
         >
-          <ModuleHeader type={bottomLeftModule} index={1} onModuleDragStart={onModuleDragStart} />
-          <ModuleContent type={bottomLeftModule} node={node} onNodeUpdate={onNodeUpdate} codeTab={codeTab} setCodeTab={setCodeTab} />
+          <ModuleHeader
+            type={bottomLeftModule}
+            index={1}
+            onModuleDragStart={onModuleDragStart}
+            actions={getModuleActions(bottomLeftModule)}
+          />
+          <ModuleContent
+            type={bottomLeftModule}
+            node={node}
+            onNodeUpdate={onNodeUpdate}
+            codeTab={codeTab}
+            setCodeTab={setCodeTab}
+            isNodeRunning={isNodeRunning}
+            mockConfig={mockConfig}
+            simulationConfig={simulationConfig}
+            onMockConfigChange={onMockConfigChange}
+            onSimulationConfigChange={onSimulationConfigChange}
+            availableRuns={availableRuns}
+            onShowRunHistory={onShowRunHistory}
+            runResult={runResult}
+            getDummyInputData={getDummyInputData}
+          />
         </div>
 
         <div
@@ -905,7 +1394,7 @@ function VerticalLayout({
           onMouseDown={onInputOutputResizeStart}
         />
 
-        <div 
+        <div
           data-module-cell
           data-module-index={2}
           className={cn(
@@ -914,10 +1403,76 @@ function VerticalLayout({
             draggingModule?.index === 2 && "opacity-50"
           )}
         >
-          <ModuleHeader type={bottomRightModule} index={2} onModuleDragStart={onModuleDragStart} />
-          <ModuleContent type={bottomRightModule} node={node} onNodeUpdate={onNodeUpdate} codeTab={codeTab} setCodeTab={setCodeTab} />
+          <ModuleHeader
+            type={bottomRightModule}
+            index={2}
+            onModuleDragStart={onModuleDragStart}
+            actions={getModuleActions(bottomRightModule)}
+          />
+          <ModuleContent
+            type={bottomRightModule}
+            node={node}
+            onNodeUpdate={onNodeUpdate}
+            codeTab={codeTab}
+            setCodeTab={setCodeTab}
+            isNodeRunning={isNodeRunning}
+            mockConfig={mockConfig}
+            simulationConfig={simulationConfig}
+            onMockConfigChange={onMockConfigChange}
+            onSimulationConfigChange={onSimulationConfigChange}
+            availableRuns={availableRuns}
+            onShowRunHistory={onShowRunHistory}
+            runResult={runResult}
+            getDummyInputData={getDummyInputData}
+          />
         </div>
       </div>
+
+      {/* Mock Data Dialog */}
+      {showMockDialog && setShowMockDialog && mockConfig && onMockConfigChange && (
+        <Dialog open={showMockDialog} onOpenChange={setShowMockDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Mock Data Configuration
+              </DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-auto">
+              <MockSimulationConfig
+                mockConfig={mockConfig}
+                simulationConfig={{ enabled: false, prompt: "" }}
+                onMockConfigChange={onMockConfigChange}
+                onSimulationConfigChange={() => {}}
+                availableRuns={availableRuns || []}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Simulation Dialog */}
+      {showSimulationDialog && setShowSimulationDialog && simulationConfig && onSimulationConfigChange && (
+        <Dialog open={showSimulationDialog} onOpenChange={setShowSimulationDialog}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Wand2 className="h-4 w-4" />
+                Simulation Configuration
+              </DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-auto">
+              <MockSimulationConfig
+                mockConfig={{ enabled: false, source: "custom" }}
+                simulationConfig={simulationConfig}
+                onMockConfigChange={() => {}}
+                onSimulationConfigChange={onSimulationConfigChange}
+                availableRuns={availableRuns || []}
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

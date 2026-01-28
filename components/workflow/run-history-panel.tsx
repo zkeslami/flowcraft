@@ -33,7 +33,7 @@ interface RunHistoryPanelProps {
 
 const statusConfig: Record<ExecutionStatus, { icon: typeof CheckCircle2; className: string; label: string }> = {
   pending: { icon: Circle, className: 'text-orange-400', label: 'Pending' },
-  running: { icon: Loader2, className: 'text-blue-400 animate-spin', label: 'Running' },
+  running: { icon: Loader2, className: 'text-blue-400', label: 'Running' },
   success: { icon: CheckCircle2, className: 'text-green-400', label: 'Success' },
   error: { icon: XCircle, className: 'text-red-400', label: 'Failed' },
 };

@@ -21,7 +21,7 @@ interface SpansListProps {
 
 const statusConfig: Record<ExecutionStatus, { icon: typeof CheckCircle2; className: string }> = {
   pending: { icon: Circle, className: 'text-orange-400' },
-  running: { icon: Loader2, className: 'text-blue-400 animate-spin' },
+  running: { icon: Loader2, className: 'text-blue-400' },
   success: { icon: CheckCircle2, className: 'text-green-400' },
   error: { icon: XCircle, className: 'text-red-400' },
 };

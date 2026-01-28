@@ -1,12 +1,15 @@
 import { FlowExecution, ExecutionHistoryItem } from './execution-types';
 
+// Fixed base timestamp for consistent hydration
+const BASE_TIME = new Date('2024-01-26T10:00:00Z').getTime();
+
 // Current/most recent execution - running
 export const currentExecution: FlowExecution = {
   id: 'exec-current',
   flowId: 'flow-invoice-001',
   flowName: 'Invoice Processing Workflow',
   status: 'running',
-  startTime: new Date(Date.now() - 12000),
+  startTime: new Date(BASE_TIME - 12000),
   triggeredBy: 'Manual Test',
   summary: {
     totalNodes: 6,
@@ -22,14 +25,14 @@ export const currentExecution: FlowExecution = {
       nodeName: 'Invoice Received',
       nodeType: 'trigger',
       status: 'success',
-      startTime: new Date(Date.now() - 12000),
-      endTime: new Date(Date.now() - 11000),
+      startTime: new Date(BASE_TIME - 12000),
+      endTime: new Date(BASE_TIME - 11000),
       duration: 1000,
       inputs: { source: 'email', invoiceId: 'INV-2024-001' },
       outputs: { invoiceData: { id: 'INV-2024-001', amount: 1250.00 } },
       logs: [
-        { id: 'log-c1', timestamp: new Date(Date.now() - 12000), level: 'info', message: 'Invoice received from email' },
-        { id: 'log-c2', timestamp: new Date(Date.now() - 11500), level: 'info', message: 'Invoice ID: INV-2024-001' },
+        { id: 'log-c1', timestamp: new Date(BASE_TIME - 12000), level: 'info', message: 'Invoice received from email' },
+        { id: 'log-c2', timestamp: new Date(BASE_TIME - 11500), level: 'info', message: 'Invoice ID: INV-2024-001' },
       ],
       metrics: { cpuTime: 45, memoryUsage: 10 },
     },
@@ -39,8 +42,8 @@ export const currentExecution: FlowExecution = {
       nodeName: 'Extract Invoice Data',
       nodeType: 'agent',
       status: 'success',
-      startTime: new Date(Date.now() - 11000),
-      endTime: new Date(Date.now() - 7000),
+      startTime: new Date(BASE_TIME - 11000),
+      endTime: new Date(BASE_TIME - 7000),
       duration: 4000,
       inputs: { invoiceData: { id: 'INV-2024-001', amount: 1250.00 } },
       outputs: {
@@ -52,9 +55,9 @@ export const currentExecution: FlowExecution = {
         }
       },
       logs: [
-        { id: 'log-c3', timestamp: new Date(Date.now() - 11000), level: 'info', message: 'Starting data extraction' },
-        { id: 'log-c4', timestamp: new Date(Date.now() - 9000), level: 'debug', message: 'Processing invoice fields' },
-        { id: 'log-c5', timestamp: new Date(Date.now() - 7000), level: 'info', message: 'Extraction completed' },
+        { id: 'log-c3', timestamp: new Date(BASE_TIME - 11000), level: 'info', message: 'Starting data extraction' },
+        { id: 'log-c4', timestamp: new Date(BASE_TIME - 9000), level: 'debug', message: 'Processing invoice fields' },
+        { id: 'log-c5', timestamp: new Date(BASE_TIME - 7000), level: 'info', message: 'Extraction completed' },
       ],
       metrics: { cpuTime: 180, memoryUsage: 52 },
       agentConfig: {
@@ -72,7 +75,7 @@ export const currentExecution: FlowExecution = {
       nodeName: 'Validate Invoice',
       nodeType: 'agent',
       status: 'running',
-      startTime: new Date(Date.now() - 7000),
+      startTime: new Date(BASE_TIME - 7000),
       inputs: {
         extracted: {
           vendor: 'Acme Corp',
@@ -81,9 +84,9 @@ export const currentExecution: FlowExecution = {
         }
       },
       logs: [
-        { id: 'log-c6', timestamp: new Date(Date.now() - 7000), level: 'info', message: 'Starting validation' },
-        { id: 'log-c7', timestamp: new Date(Date.now() - 5000), level: 'debug', message: 'Checking vendor against database' },
-        { id: 'log-c8', timestamp: new Date(Date.now() - 3000), level: 'debug', message: 'Validating amount against budget' },
+        { id: 'log-c6', timestamp: new Date(BASE_TIME - 7000), level: 'info', message: 'Starting validation' },
+        { id: 'log-c7', timestamp: new Date(BASE_TIME - 5000), level: 'debug', message: 'Checking vendor against database' },
+        { id: 'log-c8', timestamp: new Date(BASE_TIME - 3000), level: 'debug', message: 'Validating amount against budget' },
       ],
       metrics: { cpuTime: 125, memoryUsage: 42 },
       agentConfig: {
@@ -103,8 +106,8 @@ export const successfulExecution: FlowExecution = {
   flowId: 'flow-invoice-001',
   flowName: 'Invoice Processing Workflow',
   status: 'success',
-  startTime: new Date(Date.now() - 3600000),
-  endTime: new Date(Date.now() - 3545000),
+  startTime: new Date(BASE_TIME - 3600000),
+  endTime: new Date(BASE_TIME - 3545000),
   duration: 55000,
   triggeredBy: 'Manual Trigger',
   summary: {
@@ -121,14 +124,14 @@ export const successfulExecution: FlowExecution = {
       nodeName: 'Invoice Received',
       nodeType: 'trigger',
       status: 'success',
-      startTime: new Date(Date.now() - 3600000),
-      endTime: new Date(Date.now() - 3599000),
+      startTime: new Date(BASE_TIME - 3600000),
+      endTime: new Date(BASE_TIME - 3599000),
       duration: 1000,
       inputs: { source: 'api', invoiceId: 'INV-2024-002' },
       outputs: { invoiceData: { id: 'INV-2024-002', amount: 2450.00 } },
       logs: [
-        { id: 'log-1', timestamp: new Date(Date.now() - 3600000), level: 'info', message: 'Invoice received from API' },
-        { id: 'log-2', timestamp: new Date(Date.now() - 3599500), level: 'info', message: 'Invoice ID: INV-2024-002' },
+        { id: 'log-1', timestamp: new Date(BASE_TIME - 3600000), level: 'info', message: 'Invoice received from API' },
+        { id: 'log-2', timestamp: new Date(BASE_TIME - 3599500), level: 'info', message: 'Invoice ID: INV-2024-002' },
       ],
       metrics: { cpuTime: 50, memoryUsage: 12 },
     },
@@ -138,8 +141,8 @@ export const successfulExecution: FlowExecution = {
       nodeName: 'Extract Invoice Data',
       nodeType: 'agent',
       status: 'success',
-      startTime: new Date(Date.now() - 3599000),
-      endTime: new Date(Date.now() - 3590000),
+      startTime: new Date(BASE_TIME - 3599000),
+      endTime: new Date(BASE_TIME - 3590000),
       duration: 9000,
       inputs: { invoiceData: { id: 'INV-2024-002', amount: 2450.00 } },
       outputs: {
@@ -154,9 +157,9 @@ export const successfulExecution: FlowExecution = {
         }
       },
       logs: [
-        { id: 'log-3', timestamp: new Date(Date.now() - 3599000), level: 'info', message: 'Starting data extraction' },
-        { id: 'log-4', timestamp: new Date(Date.now() - 3595000), level: 'debug', message: 'Processing invoice fields' },
-        { id: 'log-5', timestamp: new Date(Date.now() - 3590000), level: 'info', message: 'Extraction completed successfully' },
+        { id: 'log-3', timestamp: new Date(BASE_TIME - 3599000), level: 'info', message: 'Starting data extraction' },
+        { id: 'log-4', timestamp: new Date(BASE_TIME - 3595000), level: 'debug', message: 'Processing invoice fields' },
+        { id: 'log-5', timestamp: new Date(BASE_TIME - 3590000), level: 'info', message: 'Extraction completed successfully' },
       ],
       metrics: { cpuTime: 220, memoryUsage: 68 },
       agentConfig: {
@@ -174,13 +177,13 @@ export const successfulExecution: FlowExecution = {
           nodeName: 'Parse Invoice Fields',
           nodeType: 'parsing',
           status: 'success',
-          startTime: new Date(Date.now() - 3598000),
-          endTime: new Date(Date.now() - 3594000),
+          startTime: new Date(BASE_TIME - 3598000),
+          endTime: new Date(BASE_TIME - 3594000),
           duration: 4000,
           inputs: { document: 'invoice-pdf' },
           outputs: { fields: ['vendor', 'amount', 'date', 'items'] },
           logs: [
-            { id: 'log-2-1', timestamp: new Date(Date.now() - 3598000), level: 'info', message: 'Parsing invoice document' },
+            { id: 'log-2-1', timestamp: new Date(BASE_TIME - 3598000), level: 'info', message: 'Parsing invoice document' },
           ],
           metrics: { cpuTime: 110, memoryUsage: 34 },
         },
@@ -190,13 +193,13 @@ export const successfulExecution: FlowExecution = {
           nodeName: 'Structure Data',
           nodeType: 'transformation',
           status: 'success',
-          startTime: new Date(Date.now() - 3594000),
-          endTime: new Date(Date.now() - 3591000),
+          startTime: new Date(BASE_TIME - 3594000),
+          endTime: new Date(BASE_TIME - 3591000),
           duration: 3000,
           inputs: { fields: ['vendor', 'amount', 'date', 'items'] },
           outputs: { structured: true },
           logs: [
-            { id: 'log-2-2', timestamp: new Date(Date.now() - 3594000), level: 'info', message: 'Structuring extracted data' },
+            { id: 'log-2-2', timestamp: new Date(BASE_TIME - 3594000), level: 'info', message: 'Structuring extracted data' },
           ],
           metrics: { cpuTime: 80, memoryUsage: 28 },
         },
@@ -208,8 +211,8 @@ export const successfulExecution: FlowExecution = {
       nodeName: 'Validate Invoice',
       nodeType: 'agent',
       status: 'success',
-      startTime: new Date(Date.now() - 3590000),
-      endTime: new Date(Date.now() - 3575000),
+      startTime: new Date(BASE_TIME - 3590000),
+      endTime: new Date(BASE_TIME - 3575000),
       duration: 15000,
       inputs: {
         extracted: {
@@ -228,10 +231,10 @@ export const successfulExecution: FlowExecution = {
         }
       },
       logs: [
-        { id: 'log-6', timestamp: new Date(Date.now() - 3590000), level: 'info', message: 'Starting validation' },
-        { id: 'log-7', timestamp: new Date(Date.now() - 3585000), level: 'debug', message: 'Checking vendor against database' },
-        { id: 'log-8', timestamp: new Date(Date.now() - 3580000), level: 'debug', message: 'Validating amount against budget' },
-        { id: 'log-9', timestamp: new Date(Date.now() - 3575000), level: 'info', message: 'All validation checks passed' },
+        { id: 'log-6', timestamp: new Date(BASE_TIME - 3590000), level: 'info', message: 'Starting validation' },
+        { id: 'log-7', timestamp: new Date(BASE_TIME - 3585000), level: 'debug', message: 'Checking vendor against database' },
+        { id: 'log-8', timestamp: new Date(BASE_TIME - 3580000), level: 'debug', message: 'Validating amount against budget' },
+        { id: 'log-9', timestamp: new Date(BASE_TIME - 3575000), level: 'info', message: 'All validation checks passed' },
       ],
       metrics: { cpuTime: 280, memoryUsage: 92 },
       agentConfig: {
@@ -248,13 +251,13 @@ export const successfulExecution: FlowExecution = {
           nodeName: 'Vendor Lookup',
           nodeType: 'database',
           status: 'success',
-          startTime: new Date(Date.now() - 3589000),
-          endTime: new Date(Date.now() - 3585000),
+          startTime: new Date(BASE_TIME - 3589000),
+          endTime: new Date(BASE_TIME - 3585000),
           duration: 4000,
           inputs: { vendor: 'Tech Solutions Ltd' },
           outputs: { found: true, vendorId: 'VND-456' },
           logs: [
-            { id: 'log-3-1', timestamp: new Date(Date.now() - 3589000), level: 'info', message: 'Looking up vendor in database' },
+            { id: 'log-3-1', timestamp: new Date(BASE_TIME - 3589000), level: 'info', message: 'Looking up vendor in database' },
           ],
           metrics: { cpuTime: 120, memoryUsage: 40 },
         },
@@ -264,13 +267,13 @@ export const successfulExecution: FlowExecution = {
           nodeName: 'Budget Check',
           nodeType: 'validation',
           status: 'success',
-          startTime: new Date(Date.now() - 3585000),
-          endTime: new Date(Date.now() - 3578000),
+          startTime: new Date(BASE_TIME - 3585000),
+          endTime: new Date(BASE_TIME - 3578000),
           duration: 7000,
           inputs: { amount: 2450.00, department: 'IT' },
           outputs: { approved: true, remainingBudget: 47550.00 },
           logs: [
-            { id: 'log-3-2', timestamp: new Date(Date.now() - 3585000), level: 'info', message: 'Checking budget allocation' },
+            { id: 'log-3-2', timestamp: new Date(BASE_TIME - 3585000), level: 'info', message: 'Checking budget allocation' },
           ],
           metrics: { cpuTime: 140, memoryUsage: 48 },
         },
@@ -282,8 +285,8 @@ export const successfulExecution: FlowExecution = {
       nodeName: 'Route for Approval',
       nodeType: 'action',
       status: 'success',
-      startTime: new Date(Date.now() - 3575000),
-      endTime: new Date(Date.now() - 3560000),
+      startTime: new Date(BASE_TIME - 3575000),
+      endTime: new Date(BASE_TIME - 3560000),
       duration: 15000,
       inputs: {
         invoiceData: { vendor: 'Tech Solutions Ltd', amount: 2450.00 },
@@ -295,9 +298,9 @@ export const successfulExecution: FlowExecution = {
         ticketId: 'APR-789'
       },
       logs: [
-        { id: 'log-10', timestamp: new Date(Date.now() - 3575000), level: 'info', message: 'Determining approval route' },
-        { id: 'log-11', timestamp: new Date(Date.now() - 3565000), level: 'info', message: 'Assigned to manager@company.com' },
-        { id: 'log-12', timestamp: new Date(Date.now() - 3560000), level: 'info', message: 'Approval ticket created: APR-789' },
+        { id: 'log-10', timestamp: new Date(BASE_TIME - 3575000), level: 'info', message: 'Determining approval route' },
+        { id: 'log-11', timestamp: new Date(BASE_TIME - 3565000), level: 'info', message: 'Assigned to manager@company.com' },
+        { id: 'log-12', timestamp: new Date(BASE_TIME - 3560000), level: 'info', message: 'Approval ticket created: APR-789' },
       ],
       metrics: { cpuTime: 150, memoryUsage: 55 },
     },
@@ -307,8 +310,8 @@ export const successfulExecution: FlowExecution = {
       nodeName: 'Send Notification',
       nodeType: 'notification',
       status: 'success',
-      startTime: new Date(Date.now() - 3560000),
-      endTime: new Date(Date.now() - 3550000),
+      startTime: new Date(BASE_TIME - 3560000),
+      endTime: new Date(BASE_TIME - 3550000),
       duration: 10000,
       inputs: {
         recipient: 'manager@company.com',
@@ -320,9 +323,9 @@ export const successfulExecution: FlowExecution = {
         messageId: 'msg-abc123'
       },
       logs: [
-        { id: 'log-13', timestamp: new Date(Date.now() - 3560000), level: 'info', message: 'Preparing notification email' },
-        { id: 'log-14', timestamp: new Date(Date.now() - 3555000), level: 'info', message: 'Sending to manager@company.com' },
-        { id: 'log-15', timestamp: new Date(Date.now() - 3550000), level: 'info', message: 'Notification sent successfully' },
+        { id: 'log-13', timestamp: new Date(BASE_TIME - 3560000), level: 'info', message: 'Preparing notification email' },
+        { id: 'log-14', timestamp: new Date(BASE_TIME - 3555000), level: 'info', message: 'Sending to manager@company.com' },
+        { id: 'log-15', timestamp: new Date(BASE_TIME - 3550000), level: 'info', message: 'Notification sent successfully' },
       ],
       metrics: { cpuTime: 80, memoryUsage: 25 },
     },
@@ -332,14 +335,14 @@ export const successfulExecution: FlowExecution = {
       nodeName: 'Complete',
       nodeType: 'end',
       status: 'success',
-      startTime: new Date(Date.now() - 3550000),
-      endTime: new Date(Date.now() - 3545000),
+      startTime: new Date(BASE_TIME - 3550000),
+      endTime: new Date(BASE_TIME - 3545000),
       duration: 5000,
       inputs: { status: 'pending_approval', ticketId: 'APR-789' },
       outputs: { result: 'Invoice processing completed - awaiting approval' },
       logs: [
-        { id: 'log-16', timestamp: new Date(Date.now() - 3550000), level: 'info', message: 'Finalizing workflow' },
-        { id: 'log-17', timestamp: new Date(Date.now() - 3545000), level: 'info', message: 'Workflow completed successfully' },
+        { id: 'log-16', timestamp: new Date(BASE_TIME - 3550000), level: 'info', message: 'Finalizing workflow' },
+        { id: 'log-17', timestamp: new Date(BASE_TIME - 3545000), level: 'info', message: 'Workflow completed successfully' },
       ],
       metrics: { cpuTime: 40, memoryUsage: 15 },
     },
@@ -352,8 +355,8 @@ export const failedExecution: FlowExecution = {
   flowId: 'flow-invoice-001',
   flowName: 'Invoice Processing Workflow',
   status: 'error',
-  startTime: new Date(Date.now() - 7200000),
-  endTime: new Date(Date.now() - 7180000),
+  startTime: new Date(BASE_TIME - 7200000),
+  endTime: new Date(BASE_TIME - 7180000),
   duration: 20000,
   triggeredBy: 'API Trigger',
   summary: {
@@ -370,14 +373,14 @@ export const failedExecution: FlowExecution = {
       nodeName: 'Invoice Received',
       nodeType: 'trigger',
       status: 'success',
-      startTime: new Date(Date.now() - 7200000),
-      endTime: new Date(Date.now() - 7199000),
+      startTime: new Date(BASE_TIME - 7200000),
+      endTime: new Date(BASE_TIME - 7199000),
       duration: 1000,
       inputs: { source: 'webhook', invoiceId: 'INV-2024-003' },
       outputs: { invoiceData: { id: 'INV-2024-003', amount: 15750.00 } },
       logs: [
-        { id: 'log-f1', timestamp: new Date(Date.now() - 7200000), level: 'info', message: 'Invoice received from webhook' },
-        { id: 'log-f2', timestamp: new Date(Date.now() - 7199500), level: 'info', message: 'Invoice ID: INV-2024-003' },
+        { id: 'log-f1', timestamp: new Date(BASE_TIME - 7200000), level: 'info', message: 'Invoice received from webhook' },
+        { id: 'log-f2', timestamp: new Date(BASE_TIME - 7199500), level: 'info', message: 'Invoice ID: INV-2024-003' },
       ],
       metrics: { cpuTime: 55, memoryUsage: 14 },
     },
@@ -387,8 +390,8 @@ export const failedExecution: FlowExecution = {
       nodeName: 'Extract Invoice Data',
       nodeType: 'agent',
       status: 'success',
-      startTime: new Date(Date.now() - 7199000),
-      endTime: new Date(Date.now() - 7190000),
+      startTime: new Date(BASE_TIME - 7199000),
+      endTime: new Date(BASE_TIME - 7190000),
       duration: 9000,
       inputs: { invoiceData: { id: 'INV-2024-003', amount: 15750.00 } },
       outputs: {
@@ -402,9 +405,9 @@ export const failedExecution: FlowExecution = {
         }
       },
       logs: [
-        { id: 'log-f3', timestamp: new Date(Date.now() - 7199000), level: 'info', message: 'Starting data extraction' },
-        { id: 'log-f4', timestamp: new Date(Date.now() - 7195000), level: 'debug', message: 'Processing invoice fields' },
-        { id: 'log-f5', timestamp: new Date(Date.now() - 7190000), level: 'info', message: 'Extraction completed' },
+        { id: 'log-f3', timestamp: new Date(BASE_TIME - 7199000), level: 'info', message: 'Starting data extraction' },
+        { id: 'log-f4', timestamp: new Date(BASE_TIME - 7195000), level: 'debug', message: 'Processing invoice fields' },
+        { id: 'log-f5', timestamp: new Date(BASE_TIME - 7190000), level: 'info', message: 'Extraction completed' },
       ],
       metrics: { cpuTime: 210, memoryUsage: 65 },
       agentConfig: {
@@ -421,8 +424,8 @@ export const failedExecution: FlowExecution = {
       nodeName: 'Validate Invoice',
       nodeType: 'agent',
       status: 'error',
-      startTime: new Date(Date.now() - 7190000),
-      endTime: new Date(Date.now() - 7180000),
+      startTime: new Date(BASE_TIME - 7190000),
+      endTime: new Date(BASE_TIME - 7180000),
       duration: 10000,
       inputs: {
         extracted: {
@@ -441,10 +444,10 @@ export const failedExecution: FlowExecution = {
         }
       },
       logs: [
-        { id: 'log-f6', timestamp: new Date(Date.now() - 7190000), level: 'info', message: 'Starting validation' },
-        { id: 'log-f7', timestamp: new Date(Date.now() - 7185000), level: 'debug', message: 'Checking vendor against database' },
-        { id: 'log-f8', timestamp: new Date(Date.now() - 7182000), level: 'warn', message: 'Budget exceeded for this amount' },
-        { id: 'log-f9', timestamp: new Date(Date.now() - 7180000), level: 'error', message: 'Validation failed: Amount exceeds available budget' },
+        { id: 'log-f6', timestamp: new Date(BASE_TIME - 7190000), level: 'info', message: 'Starting validation' },
+        { id: 'log-f7', timestamp: new Date(BASE_TIME - 7185000), level: 'debug', message: 'Checking vendor against database' },
+        { id: 'log-f8', timestamp: new Date(BASE_TIME - 7182000), level: 'warn', message: 'Budget exceeded for this amount' },
+        { id: 'log-f9', timestamp: new Date(BASE_TIME - 7180000), level: 'error', message: 'Validation failed: Amount exceeds available budget' },
       ],
       metrics: { cpuTime: 180, memoryUsage: 75, retryCount: 2 },
       agentConfig: {
@@ -464,7 +467,7 @@ export const mockExecutionHistory: ExecutionHistoryItem[] = [
     id: 'exec-current',
     flowId: 'flow-invoice-001',
     status: 'running',
-    startTime: new Date(Date.now() - 8000),
+    startTime: new Date(BASE_TIME - 8000),
     triggeredBy: 'Manual Test',
     stepsCount: 3
   },
@@ -472,7 +475,7 @@ export const mockExecutionHistory: ExecutionHistoryItem[] = [
     id: 'exec-001',
     flowId: 'flow-invoice-001',
     status: 'success',
-    startTime: new Date(Date.now() - 3600000),
+    startTime: new Date(BASE_TIME - 3600000),
     duration: 55000,
     triggeredBy: 'Manual Trigger',
     stepsCount: 6
@@ -481,7 +484,7 @@ export const mockExecutionHistory: ExecutionHistoryItem[] = [
     id: 'exec-002',
     flowId: 'flow-invoice-001',
     status: 'error',
-    startTime: new Date(Date.now() - 7200000),
+    startTime: new Date(BASE_TIME - 7200000),
     duration: 20000,
     triggeredBy: 'API Trigger',
     stepsCount: 3
@@ -490,7 +493,7 @@ export const mockExecutionHistory: ExecutionHistoryItem[] = [
     id: 'exec-003',
     flowId: 'flow-invoice-001',
     status: 'success',
-    startTime: new Date(Date.now() - 86400000),
+    startTime: new Date(BASE_TIME - 86400000),
     duration: 52000,
     triggeredBy: 'Schedule',
     stepsCount: 6
@@ -499,7 +502,7 @@ export const mockExecutionHistory: ExecutionHistoryItem[] = [
     id: 'exec-004',
     flowId: 'flow-invoice-001',
     status: 'success',
-    startTime: new Date(Date.now() - 172800000),
+    startTime: new Date(BASE_TIME - 172800000),
     duration: 48000,
     triggeredBy: 'Webhook',
     stepsCount: 6
@@ -508,7 +511,7 @@ export const mockExecutionHistory: ExecutionHistoryItem[] = [
     id: 'exec-005',
     flowId: 'flow-invoice-001',
     status: 'error',
-    startTime: new Date(Date.now() - 259200000),
+    startTime: new Date(BASE_TIME - 259200000),
     duration: 18000,
     triggeredBy: 'API Trigger',
     stepsCount: 2
@@ -517,7 +520,7 @@ export const mockExecutionHistory: ExecutionHistoryItem[] = [
     id: 'exec-006',
     flowId: 'flow-invoice-001',
     status: 'success',
-    startTime: new Date(Date.now() - 345600000),
+    startTime: new Date(BASE_TIME - 345600000),
     duration: 51000,
     triggeredBy: 'Manual Trigger',
     stepsCount: 6
@@ -526,7 +529,7 @@ export const mockExecutionHistory: ExecutionHistoryItem[] = [
     id: 'exec-007',
     flowId: 'flow-invoice-001',
     status: 'success',
-    startTime: new Date(Date.now() - 432000000),
+    startTime: new Date(BASE_TIME - 432000000),
     duration: 49000,
     triggeredBy: 'Schedule',
     stepsCount: 6
